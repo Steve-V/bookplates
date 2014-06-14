@@ -1,24 +1,26 @@
 package main
 
 import (
-	"fmt"
-	"github.com/signintech/gopdf"
-	"github.com/signintech/gopdf/fonts"
+	"os"
+	"code.google.com/p/rsc/qr"
+	"bitbucket.org/zombiezen/gopdf/pdf"
 )
 
 func main() {
+	qrCode, err := qr.Encode("http://foo/bar", qr.H)
+	if err != nil {
+		panic(err)
+	}
 
-	pdf := gopdf.GoPdf{}
-	pdf.Start(gopdf.Config{Unit: "pt", PageSize: gopdf.Rect{W: 595.28, H: 841.89}}) //595.28, 841.89 = A4
-	pdf.AddFont("THSarabunPSK", new(fonts.THSarabun), "THSarabun.z")
-	pdf.AddFont("Loma", new(fonts.Loma), "Loma.z")
-	pdf.AddPage()
-	pdf.SetFont("THSarabunPSK", "B", 14)
-	pdf.Cell(nil, ToCp874("Hello world  = สวัสดี โลก in thai"))
-	pdf.WritePdf("/tmp/out.pdf")
-	fmt.Println("Done...")
-}
+	doc := pdf.New()
+	canvas := doc.NewPage(pdf.USLetterWidth, pdf.USLetterHeight)
+	canvas.DrawImage(qrCode.Image(), pdf.Rectangle{
+		Min: pdf.Point{X: 7.5*pdf.Inch, Y: 7.5*pdf.Inch},
+		Max: pdf.Point{X: 8.5*pdf.Inch, Y: 8.5*pdf.Inch},
+	})
+	canvas.Close()
 
-func ToCp874(str string) string {
-	return str
+	if err := doc.Encode(os.Stdout); err != nil {
+		panic(err)
+	}
 }
