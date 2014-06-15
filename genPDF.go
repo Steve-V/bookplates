@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"math"
 	"os"
 	"code.google.com/p/rsc/qr"
 	"bitbucket.org/zombiezen/gopdf/pdf"
@@ -21,7 +22,7 @@ var avery22805 = labelSheet{
 func main() {
 	w := newLabelSheetWriter(avery22805)
 	group, id := 590, 12729239
-	for i := 0; i < 4 * 24; i++ {
+	for i := 0; i < 24; i++ {
 		w.Write(group, id + i)
 	}
 	doc := w.Finish()
@@ -86,7 +87,6 @@ func newLabelSheetWriter(paper labelSheet) *labelSheetWriter {
 	return w
 }
 
-
 func (w *labelSheetWriter) Write(group, id int) {
 	if w.written == len(w.positions) {
 		if w.page != nil {
@@ -95,11 +95,38 @@ func (w *labelSheetWriter) Write(group, id int) {
 		w.page = w.doc.NewPage(w.paper.PageWidth, w.paper.PageHeight)
 		w.written = 0
 	}
-	qrCode, err := qr.Encode(fmt.Sprintf("http://bcing.me/%d-%d", group, id), qr.H)
+	pos := w.positions[w.written]
+	qrCode, err := qr.Encode(fmt.Sprintf("http://bcing.me/%d-%d", group, id), qr.L)
 	if err != nil {
 		panic(err)
 	}
-	w.page.DrawImage(qrCode.Image(), w.positions[w.written])
+	textSize := pdf.Unit(8)
+	qrScale := float32(w.paper.Height - (1.25 * textSize)) / float32(w.paper.Height)
+	w.page.Push()
+	w.page.Translate(pos.Min.X+(1.25 * textSize), pos.Min.Y)
+	w.page.Scale(qrScale, qrScale)
+	w.page.DrawImage(qrCode.Image(), pdf.Rectangle{
+		Max: pdf.Point{
+			X: w.paper.Width,
+			Y: w.paper.Height,
+		},
+	})
+	w.page.Pop()
+	w.page.Push()
+	text := new(pdf.Text)
+	text.SetFont(pdf.Helvetica, textSize)
+	text.Text("Ex libris Miki dichro@rcpt.to")
+	w.page.Translate(pos.Max.X-text.X(), pos.Max.Y-textSize)
+	w.page.DrawText(text)
+	w.page.Pop()
+	w.page.Push()
+	w.page.Translate(pos.Min.X+textSize, pos.Min.Y)
+	w.page.Rotate(math.Pi/2)
+	text = new(pdf.Text)
+	text.SetFont(pdf.Helvetica, textSize)
+	text.Text(fmt.Sprintf("BCID %d-%d", group, id))
+	w.page.DrawText(text)
+	w.page.Pop()
 	w.written++
 }
 
