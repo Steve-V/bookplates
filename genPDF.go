@@ -19,19 +19,12 @@ var avery22805 = labelSheet{
 }
 
 func main() {
-	doc := pdf.New()
-	canvas := doc.NewPage(pdf.USLetterWidth, pdf.USLetterHeight)
-	labels := avery22805.Positions()
-	for i, label := range labels {
-		qrCode, err := qr.Encode(fmt.Sprintf("http://foo/bar/%d", i), qr.H)
-		if err != nil {
-			panic(err)
-		}
-		image := qrCode.Image()
-		canvas.DrawImage(image, label)
+	w := newLabelSheetWriter(avery22805)
+	group, id := 590, 12729239
+	for i := 0; i < 4 * 24; i++ {
+		w.Write(group, id + i)
 	}
-	canvas.Close()
-
+	doc := w.Finish()
 	if err := doc.Encode(os.Stdout); err != nil {
 		panic(err)
 	}
@@ -72,4 +65,48 @@ func (l *labelSheet) Positions() []pdf.Rectangle {
 		y += l.Height + l.RowGap
 	}
 	return labels
+}
+
+type labelSheetWriter struct {
+	paper labelSheet
+	positions []pdf.Rectangle
+	doc *pdf.Document
+	page *pdf.Canvas
+	written int
+}
+
+func newLabelSheetWriter(paper labelSheet) *labelSheetWriter {
+	pos := paper.Positions()
+	w := &labelSheetWriter{
+		paper: paper,
+		positions: pos,
+		doc: pdf.New(),
+		written: len(pos),
+	}
+	return w
+}
+
+
+func (w *labelSheetWriter) Write(group, id int) {
+	if w.written == len(w.positions) {
+		if w.page != nil {
+			w.page.Close()
+		}
+		w.page = w.doc.NewPage(w.paper.PageWidth, w.paper.PageHeight)
+		w.written = 0
+	}
+	qrCode, err := qr.Encode(fmt.Sprintf("http://bcing.me/%d-%d", group, id), qr.H)
+	if err != nil {
+		panic(err)
+	}
+	w.page.DrawImage(qrCode.Image(), w.positions[w.written])
+	w.written++
+}
+
+func (w *labelSheetWriter) Finish() *pdf.Document {
+	if w.page != nil {
+		w.page.Close()
+		w.written = len(w.positions)
+	}
+	return w.doc
 }
