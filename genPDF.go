@@ -96,38 +96,45 @@ func (w *labelSheetWriter) Write(group, id int) {
 		w.written = 0
 	}
 	pos := w.positions[w.written]
+	w.page.Push()
+	w.page.Translate(pos.Min.X, pos.Min.Y)
+	w.written++
+	render(w.page, pdf.Point{
+			X: w.paper.Width,
+			Y: w.paper.Height,
+		}, group, id)
+	w.page.Pop()
+}
+
+func render(page *pdf.Canvas, bound pdf.Point, group, id int) {
 	qrCode, err := qr.Encode(fmt.Sprintf("http://bcing.me/%d-%d", group, id), qr.L)
 	if err != nil {
 		panic(err)
 	}
 	textSize := pdf.Unit(8)
-	qrScale := float32(w.paper.Height - (1.25 * textSize)) / float32(w.paper.Height)
-	w.page.Push()
-	w.page.Translate(pos.Min.X+(1.25 * textSize), pos.Min.Y)
-	w.page.Scale(qrScale, qrScale)
-	w.page.DrawImage(qrCode.Image(), pdf.Rectangle{
-		Max: pdf.Point{
-			X: w.paper.Width,
-			Y: w.paper.Height,
-		},
+	qrScale := float32(bound.X - (1.25 * textSize)) / float32(bound.X)
+	page.Push()
+	page.Translate(1.25 * textSize, 0)
+	page.Scale(qrScale, qrScale)
+	page.DrawImage(qrCode.Image(), pdf.Rectangle{
+		Max: bound,
 	})
-	w.page.Pop()
-	w.page.Push()
+	page.Pop()
+	page.Push()
 	text := new(pdf.Text)
 	text.SetFont(pdf.Helvetica, textSize)
 	text.Text("Ex libris Miki dichro@rcpt.to")
-	w.page.Translate(pos.Max.X-text.X(), pos.Max.Y-textSize)
-	w.page.DrawText(text)
-	w.page.Pop()
-	w.page.Push()
-	w.page.Translate(pos.Min.X+textSize, pos.Min.Y)
-	w.page.Rotate(math.Pi/2)
+	page.Translate(bound.X-text.X(), bound.Y-textSize)
+	page.DrawText(text)
+	page.Pop()
+	page.Push()
+	page.Translate(textSize, 0)
+	page.Rotate(math.Pi/2)
 	text = new(pdf.Text)
 	text.SetFont(pdf.Helvetica, textSize)
 	text.Text(fmt.Sprintf("BCID %d-%d", group, id))
-	w.page.DrawText(text)
-	w.page.Pop()
-	w.written++
+	page.DrawText(text)
+	page.Pop()
 }
 
 func (w *labelSheetWriter) Finish() *pdf.Document {
