@@ -47,7 +47,7 @@ func (l *labelSheet) Positions() []pdf.Rectangle {
 	labels := []pdf.Rectangle{}
 	two := pdf.Unit(2)
 	xBase := (l.PageWidth / two) - pdf.Unit(l.Cols / 2) * (l.Width + l.ColGap) + l.ColGap / two
-	y := (l.PageHeight / two) - pdf.Unit(l.Rows / 2) * (l.Height + l.RowGap) + l.RowGap / two
+	y := (l.PageHeight / two) + pdf.Unit(l.Rows / 2 - 1) * (l.Height + l.RowGap) + l.RowGap / two
 	for row := 0; row < l.Rows; row++ {
 		x := xBase
 		for col := 0; col < l.Cols; col++ {
@@ -63,7 +63,7 @@ func (l *labelSheet) Positions() []pdf.Rectangle {
 			})
 			x += l.Width + l.ColGap
 		}
-		y += l.Height + l.RowGap
+		y -= l.Height + l.RowGap
 	}
 	return labels
 }
