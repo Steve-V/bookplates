@@ -21,10 +21,7 @@ var avery22805 = labelSheet{
 
 func main() {
 	w := newLabelSheetWriter(avery22805)
-	group, id := 590, 12729239
-	for i := 0; i < 24; i++ {
-		w.Write(group, id + i)
-	}
+	w.Write(&simple{590, 12729239}, 24)
 	doc := w.Finish()
 	if err := doc.Encode(os.Stdout); err != nil {
 		panic(err)
@@ -68,6 +65,10 @@ func (l *labelSheet) Positions() []pdf.Rectangle {
 	return labels
 }
 
+type Renderer interface {
+	Render(page *pdf.Canvas, bound pdf.Point, index int)
+}
+
 type labelSheetWriter struct {
 	paper labelSheet
 	positions []pdf.Rectangle
@@ -87,7 +88,13 @@ func newLabelSheetWriter(paper labelSheet) *labelSheetWriter {
 	return w
 }
 
-func (w *labelSheetWriter) Write(group, id int) {
+func (w *labelSheetWriter) Write(renderer Renderer, count int) {
+	for i := 0; i < count; i++ {
+		w.write(renderer, i)
+	}
+}
+
+func (w *labelSheetWriter) write(renderer Renderer, index int) {
 	if w.written == len(w.positions) {
 		if w.page != nil {
 			w.page.Close()
@@ -99,15 +106,27 @@ func (w *labelSheetWriter) Write(group, id int) {
 	w.page.Push()
 	w.page.Translate(pos.Min.X, pos.Min.Y)
 	w.written++
-	render(w.page, pdf.Point{
+	renderer.Render(w.page, pdf.Point{
 			X: w.paper.Width,
 			Y: w.paper.Height,
-		}, group, id)
+		}, index)
 	w.page.Pop()
 }
 
-func render(page *pdf.Canvas, bound pdf.Point, group, id int) {
-	qrCode, err := qr.Encode(fmt.Sprintf("http://bcing.me/%d-%d", group, id), qr.L)
+func (w *labelSheetWriter) Finish() *pdf.Document {
+	if w.page != nil {
+		w.page.Close()
+		w.written = len(w.positions)
+	}
+	return w.doc
+}
+
+type simple struct {
+	group, id int
+}
+
+func (s *simple) Render(page *pdf.Canvas, bound pdf.Point, index int) {
+	qrCode, err := qr.Encode(fmt.Sprintf("http://bcing.me/%d-%d", s.group, s.id + index), qr.L)
 	if err != nil {
 		panic(err)
 	}
@@ -132,15 +151,7 @@ func render(page *pdf.Canvas, bound pdf.Point, group, id int) {
 	page.Rotate(math.Pi/2)
 	text = new(pdf.Text)
 	text.SetFont(pdf.Helvetica, textSize)
-	text.Text(fmt.Sprintf("BCID %d-%d", group, id))
+	text.Text(fmt.Sprintf("BCID %d-%d", s.group, s.id + index))
 	page.DrawText(text)
 	page.Pop()
-}
-
-func (w *labelSheetWriter) Finish() *pdf.Document {
-	if w.page != nil {
-		w.page.Close()
-		w.written = len(w.positions)
-	}
-	return w.doc
 }
