@@ -1,4 +1,4 @@
-package bookplates
+package format
 
 import (
 	"bitbucket.org/zombiezen/gopdf/pdf"
