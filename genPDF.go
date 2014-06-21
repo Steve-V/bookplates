@@ -11,9 +11,8 @@ import (
 
 func main() {
 	w := format.NewLabelSheetWriter(format.Avery22805)
-	w.SetVerticalFuzz(0.1 * pdf.Cm)
-	w.Write(&simple{590, 12729239}, 10)
-	w.Write(&simple{538, 12729269}, 100)
+	w.SetVerticalFuzz(0.2 * pdf.Cm)
+	w.Write(&simple{538, 12729269+14}, 100-14)
 	doc := w.Finish()
 	if err := doc.Encode(os.Stdout); err != nil {
 		panic(err)
