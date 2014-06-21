@@ -62,8 +62,10 @@ type LabelSheetWriter struct {
 	doc       *pdf.Document
 	page      *pdf.Canvas
 	written   int
+	fuzz      pdf.Unit
 }
 
+// NewLabelSheetWriter creates a LabelSheetWriter configured for the given LabelSheet.
 func NewLabelSheetWriter(paper LabelSheet) *LabelSheetWriter {
 	pos := paper.Positions()
 	w := &LabelSheetWriter{
@@ -73,6 +75,10 @@ func NewLabelSheetWriter(paper LabelSheet) *LabelSheetWriter {
 		written:   len(pos),
 	}
 	return w
+}
+
+func (w *LabelSheetWriter) SetVerticalFuzz(fuzz pdf.Unit) {
+	w.fuzz = fuzz
 }
 
 func (w *LabelSheetWriter) Write(renderer Renderer, count int) {
@@ -93,6 +99,12 @@ func (w *LabelSheetWriter) write(renderer Renderer, index int) {
 	w.page.Push()
 	w.page.Translate(pos.Min.X, pos.Min.Y)
 	w.written++
+	if w.fuzz > 0 {
+		// FIXME: all the following implies square labels
+		w.page.Translate(w.fuzz, w.fuzz)
+		scale := float32(w.paper.Width-2*w.fuzz) / float32(w.paper.Width)
+		w.page.Scale(scale, scale)
+	}
 	renderer.Render(w.page, pdf.Point{
 		X: w.paper.Width,
 		Y: w.paper.Height,
