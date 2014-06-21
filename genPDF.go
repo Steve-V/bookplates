@@ -11,7 +11,8 @@ import (
 
 func main() {
 	w := format.NewLabelSheetWriter(format.Avery22805)
-	w.Write(&simple{590, 12729239}, 24)
+	w.Write(&simple{590, 12729239}, 10)
+	w.Write(&simple{538, 12729269}, 100)
 	doc := w.Finish()
 	if err := doc.Encode(os.Stdout); err != nil {
 		panic(err)
@@ -23,7 +24,7 @@ type simple struct {
 }
 
 func (s *simple) Render(page *pdf.Canvas, bound pdf.Point, index int) {
-	qrCode, err := qr.Encode(fmt.Sprintf("http://bcing.me/%d-%d", s.group, s.id+index), qr.L)
+	qrCode, err := qr.Encode(fmt.Sprintf("http://bcing.me/%d-%d", s.group, s.id+index), qr.H)
 	if err != nil {
 		panic(err)
 	}
