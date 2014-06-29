@@ -4,14 +4,15 @@ use strict;
 
 use Text::CSV;
 use WWW::Scraper::ISBN;
+use URI::Escape;
 
 my $csv = new Text::CSV;
 my @lines = reverse <>;
 my $scraper = new WWW::Scraper::ISBN;
-$scraper->drivers("LOC", "ISBNnu", "Yahoo");
+$scraper->drivers("GoogleBooks", "Yahoo", "LOC", "ISBNnu");
 
 my $bcid = undef;
-my $book = undef;
+my $result = undef;
 
 # Known elephant in Cairo
 push @lines, "qr,";
@@ -19,24 +20,44 @@ push @lines, "qr,";
 foreach my $line (@lines) {
 	$line =~ s/;$//;
 	unless ($csv->parse($line)) {
-		print "Unparseable", $line, "\n";
+		warn "Unparseable ", $line, "\n";
 		next;
 	}
 	my ($type, $code) = $csv->fields();
 	if ($type eq "qr") {
-		if ($book) {
+		if ($result and $bcid) {
 			# upload!
-			print "Uploading", $book->{'title'}, "\n";
+			warn "Uploading ", $result->book->{'title'}, "\n";
+			my %fields = (
+				Title => $result->book->{'title'},
+				Author => $result->book->{'author'},
+				ISBN => $result->isbn,
+				CategoryId => 0,
+				Status => 'PermanentCollection',
+				Comments => 'On the Godspeed bookshelf.',
+				BCID => $bcid,
+			);
+			my @kvpairs;
+			while(my ($k, $v) = each %fields) {
+				push @kvpairs, join("=", $k, uri_escape($v));
+			}
+			print join("&", @kvpairs), "\n";
 		}
-		$book = undef;
+		$result = undef;
+		if ($code =~ m|/([-\d+]+)$|) {
+			$bcid = $1;
+			warn "New BCID ", $bcid;
+		} else {
+			warn "Unparseable BCID ", $code;
+		}
 	} else {
-		if (!$book) {
+		if (!$result) {
 			my $r = $scraper->search($code);
 			if ($r->found) {
-				$book = $r->book;
-				print "Found", $code, "\n";
+				$result = $r;
+				warn "Found ", $code, "\n";
 			} else {
-				print "Not found", $code, "\n";
+				warn "Not found ", $code, "\n";
 			}
 		}
 	}
