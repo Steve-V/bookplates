@@ -1,5 +1,8 @@
 #!/usr/bin/perl -w
 
+# Converts QuickMark-style barcode scanner log to curl-able HTTP
+# POST bodies for BookCrossing.
+
 use strict;
 
 use Text::CSV;
