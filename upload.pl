@@ -36,6 +36,7 @@ foreach my $line (@lines) {
 				Status => 'PermanentCollection',
 				Comments => 'On the Godspeed bookshelf.',
 				BCID => $bcid,
+				Asin => Business::ISBN->new($result->isbn)->as_isbn10->as_string([]),
 			);
 			my @kvpairs;
 			while(my ($k, $v) = each %fields) {
