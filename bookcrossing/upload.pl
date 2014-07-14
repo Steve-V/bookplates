@@ -43,7 +43,7 @@ foreach my $line (@lines) {
 			);
 			my @kvpairs;
 			while(my ($k, $v) = each %fields) {
-				push @kvpairs, join("=", $k, uri_escape($v));
+				push @kvpairs, join("=", $k, uri_escape_utf8($v));
 			}
 			print join("&", @kvpairs), "\n";
 		}
@@ -56,6 +56,10 @@ foreach my $line (@lines) {
 		}
 	} else {
 		if (!$result) {
+			unless (Business::ISBN->new($code)->is_valid) {
+				warn "Invalid ISBN $code";
+				next;
+			}
 			my $r = $scraper->search($code);
 			if ($r->found) {
 				$result = $r;
