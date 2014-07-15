@@ -11,6 +11,8 @@ use URI::Escape;
 
 my $csv = new Text::CSV;
 my @lines = reverse <>;
+$lines[$#lines] =~ s/^[^"]+//;
+
 my $scraper = new WWW::Scraper::ISBN;
 $scraper->drivers("GoogleBooks", "Yahoo", "LOC", "ISBNnu");
 
@@ -56,7 +58,8 @@ foreach my $line (@lines) {
 		}
 	} else {
 		if (!$result) {
-			unless (Business::ISBN->new($code)->is_valid) {
+			my $isbn = new Business::ISBN $code;
+			unless ($isbn and $isbn->is_valid) {
 				warn "Invalid ISBN $code";
 				next;
 			}
