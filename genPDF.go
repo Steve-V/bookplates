@@ -2,7 +2,7 @@ package main
 
 import (
 	"bitbucket.org/zombiezen/gopdf/pdf"
-	"code.google.com/p/rsc/qr"
+	"github.com/mdp/rsc"
 	"fmt"
 	"github.com/dichro/bookplates/format"
 	"math"
